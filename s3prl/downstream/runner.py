@@ -27,6 +27,8 @@ from s3prl.utility.helper import is_leader_process, get_model_state, show, defau
 
 from huggingface_hub import HfApi, HfFolder, Repository
 
+import wandb
+
 SAMPLE_RATE = 16000
 
 MODEL_CARD_MARKDOWN = """---
@@ -265,6 +267,10 @@ class Runner():
         records = defaultdict(list)
         epoch = self.init_ckpt.get('Epoch', 0)
         train_split = self.config['runner'].get("train_dataloader", "train")
+
+        # WanDB - TODO, is this even the right model to watch?? Or do we need to "watch" the composition of the upstream / featurizer / downstream as one unit??
+        wandb.watch(self.downstream.model)
+
         while pbar.n < pbar.total:
             try:
                 dataloader = self.downstream.model.get_dataloader(train_split, epoch=epoch)
@@ -407,6 +413,7 @@ class Runner():
             self.push_to_huggingface_hub()
         if is_leader_process():
             logger.close()
+            wandb.finish()
 
 
     def evaluate(self, split=None, logger=None, global_step=0):

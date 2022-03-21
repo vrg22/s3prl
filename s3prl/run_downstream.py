@@ -12,6 +12,8 @@ import numpy as np
 from argparse import Namespace
 from torch.distributed import is_initialized, get_world_size
 
+import wandb
+
 from s3prl import hub
 from s3prl import downstream
 from s3prl.downstream.runner import Runner
@@ -89,6 +91,7 @@ def get_downstream_args():
     parser.add_argument('--disable_cudnn', action='store_true', help='Disable CUDNN')
 
     args = parser.parse_args()
+
     backup_files = []
 
     if args.expdir is None:
@@ -149,7 +152,19 @@ def get_downstream_args():
     if args.override is not None and args.override.lower() != "none":
         override(args.override, args, config)
         os.makedirs(args.expdir, exist_ok=True)
-    
+
+    # WandB: initialize and set experiment argument values
+    wandb.init(
+        project="audio-proj",
+        name=str(args.expname),
+    )
+    for k, v in vars(args).items():
+        wandb.config[k] = v
+        
+    for k, v in config.items():
+        wandb.config[k] = v
+
+
     return args, config, backup_files
 
 

@@ -1,5 +1,6 @@
 import os
 import math
+from numpy import full_like
 import torch
 import random
 from pathlib import Path
@@ -14,6 +15,7 @@ from ..model import *
 from .model import *
 from .dataset import IEMOCAPDataset, collate_fn
 
+import wandb
 
 class DownstreamExpert(nn.Module):
     """
@@ -130,6 +132,11 @@ class DownstreamExpert(nn.Module):
                 average,
                 global_step=global_step
             )
+
+            # Wandb logging
+            full_key = f'emotion-{self.fold}/{mode}-{key}'
+            wandb.log({full_key: average})
+
             with open(Path(self.expdir) / "log.log", 'a') as f:
                 if key == 'acc':
                     print(f"{mode} {key}: {average}")

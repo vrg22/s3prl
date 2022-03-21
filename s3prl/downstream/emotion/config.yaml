@@ -1,11 +1,11 @@
 runner:
-  total_steps: 30000
+  total_steps: 60000
   gradient_clipping: 1
-  gradient_accumulate_steps: 8
+  gradient_accumulate_steps: 1
 
-  log_step: 500
-  eval_step: 1000
-  save_step: 1000
+  log_step: 700
+  eval_step: 700
+  save_step: 700
   max_keep: 1
   eval_dataloaders:
     - dev
@@ -13,28 +13,28 @@ runner:
 
 optimizer:
   name: TorchOptim
-  torch_optim_name: Adam
+  torch_optim_name: AdamW
   lr: 1.0e-4
 
 # comment the whole scheduler config block
 # to disable learning rate scheduling
-# scheduler:
-#   name: linear_schedule_with_warmup
-#   num_warmup_steps: 1400
+scheduler:
+  name: linear_schedule_with_warmup
+  num_warmup_steps: 1400
 
 downstream_expert:
   datarc:
-    root: /groups/public/benchmark/IEMOCAP
+    root: /home/xadxad/work/audioproj/datasets/IEMOCAP/IEMOCAP_full_release
     test_fold: fold1
     pre_load: True
-    train_batch_size: 4
-    eval_batch_size: 4
-    num_workers: 12
+    train_batch_size: 10
+    eval_batch_size: 10
+    num_workers: 0
     valid_ratio: 0.2
 
   modelrc:
     projector_dim: 256
-    select: UtteranceLevel
+    select: DeepModel
 
     UtteranceLevel:
       pooling: MeanPooling
@@ -46,3 +46,4 @@ downstream_expert:
       padding: 2
       pooling: 5
       dropout: 0.4
+#      output_class_num: 4
