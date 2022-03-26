@@ -282,6 +282,7 @@ class Runner():
                 else:
                     raise
 
+            # TODO: REWRITE THIS BIT to account for the fact that in some cases we may NOT be loading WAVs from the dataloader itself, but something like an encoding (e.g. OUTPUT of a wav2vec2, etc).
             for batch_id, (wavs, *others) in enumerate(tqdm(dataloader, dynamic_ncols=True, desc='train', file=tqdm_file)):
                 # try/except block for forward/backward
                 try:
@@ -289,12 +290,15 @@ class Runner():
                         break
                     global_step = pbar.n + 1
 
+                    # TODO: Be able to modify the below to, based on an input argument, selectively SKIP applying model upstream.
                     wavs = [torch.FloatTensor(wav).to(self.args.device) for wav in wavs]
                     if self.upstream.trainable:
                         features = self.upstream.model(wavs)
                     else:
                         with torch.no_grad():
                             features = self.upstream.model(wavs)
+
+                    # Featurizer model apply - handles things like (potentially trainable) weighted average layers, normalization, etc.
                     features = self.featurizer.model(wavs, features)
 
                     if specaug:
