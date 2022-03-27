@@ -38,8 +38,10 @@ DUMMY_WAV_PATH = 'Session1/sentences/wav/Ses01M_script01_2/Ses01M_script01_2_F00
 
 OUTPUT_FILE_TEMPLATE = '{}_featurized_lastlayer.h5' # E.g. fold1_featurized_lastlayer, Session1_featurized, whatev you want.
 
-# ==========================
+############ FOR TESTING PURPOSES ONLY!!!!! ##############
+NUM_DATA = 200 # Num data samples to ACTUALLY save into the H5 for each of train and test groups
 
+# ======================================
 
 # Audio Processing
 SAMPLE_RATE = 16000
@@ -211,9 +213,9 @@ def generate_h5(
             train_ll_dset[-seq_len:] = torch.squeeze(last_layer)
 
         ############ FOR TESTING PURPOSES ONLY!!!!! ##############
-        # if train_wav_id == 5:
-        #     # Pretend there were only 5 wavs to process in this group
-        #     train_group.attrs["num_wavs"] = 5            
+        # if train_wav_id+1 == NUM_DATA: # IE, we've processed NUM_DATA Ids to this point
+        #     # Pretend there were only NUM_DATA wavs in this group total
+        #     train_group.attrs["num_wavs"] = NUM_DATA
         #     break # Break out of loop thus creating a tiny group in the H5
         #     # sys.exit()
 
@@ -257,10 +259,10 @@ def generate_h5(
             # Stack the meaningful axes of last_layer to dset
             test_ll_dset[-seq_len:] = torch.squeeze(last_layer)
 
-        ############ FOR TESTING PURPOSES ONLY!!!!! ##############
-        # if test_wav_id == 5:
-        #     # Pretend there were only 5 wavs to process in this group
-        #     test_group.attrs["num_wavs"] = 5            
+        ############ FOR TESTING PURPOSES ONLY!!!!! ##############        
+        # if test_wav_id+1 == NUM_DATA: # IE, we've processed NUM_DATA Ids to this point
+        #     # Pretend there were only NUM_DATA wavs in this group total
+        #     test_group.attrs["num_wavs"] = NUM_DATA
         #     break # Break out of loop thus creating a tiny group in the H5
         #     # sys.exit()
 

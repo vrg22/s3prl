@@ -16,6 +16,8 @@ from torchaudio.transforms import Resample
 
 SAMPLE_RATE = 16000
 
+# Adjust this # to effectively change how big chunks of last_layer data that we load from H5 is, and thus the frequency of file loads
+LL_CHUNK_SIZE = 50
 
 # NEW Dataset we create specifically for purposes of loading Last_layer output from existing H5 files on disk
 class IemoH5LastLayerDataset(Dataset):
@@ -45,29 +47,64 @@ class IemoH5LastLayerDataset(Dataset):
             self.labels = group['label'][:]
             self.speakers = group['speaker'][:]
 
-        # Potential preloading of all the last_layer data                
+        # Initial values
+        self.loaded = 0 # to start. This variable indicates num datums that have ever been loaded, even if we don't have their data in mem anymore. ASSUMPTION: we are always moving FORWARD in the dataset, never backward, which allows us to purge datums with IDX < self.loaded at any time.
+        self.last_layers = [None] * self.num_datums
+
+        # Potential preloading of all the last_layer data ... in practice this is way too big, don't do it. Rely on LL_CHUNK_SIZE behavior instead.
         self.pre_load = pre_load
         if pre_load:
-            self.last_layers = self._load_all()        
+            self.last_layers = self._load_all()
+            self.loaded = self.num_datums # Num of layer infos that we've already loaded, IE also the idx within last_layers
+        else:            
+            # Load next LL_CHUNK_SIZE datums into last_layers and go on from there            
+            self._chunk_lls() # internally updates self.last_layers & self.loaded
 
-    def _load_ll(self, idx):
-        if not hasattr(self, 'last_layers'):
-            # Would need to open the file and group directly here
-            with h5py.File(self.h5_path,"r") as hdf:
-                ll_raw_data = hdf[self.type]['last_layer'][:]
-                # hdf['{}/{}'.format(self.type, 'last_layer')][:]
+    # TODO: MAY ALSO NEED TO actively FLUSH the OLD shit from self.last_layers, WTF?!!
+    # Helper method to preload the next "chunk" the data beginning at idx == self.loaded
+    def _chunk_lls(self):
+        # Possibly unnecessary statement, but What the hell
+        if self.loaded == self.num_datums:
+            return
 
+        # SO WE KNOW WHAT TO PURGE
+        orig_loaded = self.loaded
+
+        # last_layer_list = []
+        with h5py.File(self.h5_path,"r") as hdf:
+            ll_raw_data = hdf[self.type]['last_layer'][:]
+            # hdf['{}/{}'.format(self.type, 'last_layer')][:]
+            
+            end_range_loaded = min(self.loaded + LL_CHUNK_SIZE, self.num_datums)
+            idx_range = range(self.loaded, end_range_loaded)
+            for idx in idx_range: 
                 start_idx = self.ll_idxs[idx]
                 end_idx = len(ll_raw_data) if idx+1 == self.num_datums else self.ll_idxs[idx+1]
                 ll = ll_raw_data[start_idx:end_idx, :]
-        else:
-            ll = self.last_layers[idx]
+                
+                self.last_layers[idx] = ll
+                # last_layer_list.append(ll)
 
-        return ll
+            # Finally, update loaded count accurately
+            self.loaded = end_range_loaded
 
+        # TODO: FIX THIS LOGIC
+        # TRY THIS TO GET RID OF OLD SHIT THAT IS CLOGGING MEMORY
+        # if orig_loaded > 0:
+        #     self.last_layers[:orig_loaded] = [None] * orig_loaded
+
+    def _load_ll(self, idx):
+        #if not hasattr(self, 'last_layers'):    # In this new chunking implementation, we always expect to have self.last_layers attr
+        while (idx+1) > self.loaded:
+            # IE, while the wav # that I requested is beyond what's loaded, keep chunking until we have it. NOTE if random idxs are accessed, then we're fucked.
+            self._chunk_lls()
+        return self.last_layers[idx]
+
+    # TODO: Is this ever used if not preloading?
     def _load_all(self):
         '''Load the H5 last_layer data into this obj all at once...'''
-        if not hasattr(self, 'last_layers'):
+        # if not hasattr(self, 'last_layers'):
+        if self.loaded < self.num_datums: # In this new chunking implementation, we always expect to have self.last_layers attr
             last_layer_list = []
             with h5py.File(self.h5_path,"r") as hdf:
                 ll_raw_data = hdf[self.type]['last_layer'][:]
@@ -81,6 +118,7 @@ class IemoH5LastLayerDataset(Dataset):
                     last_layer_list.append(ll)
 
             self.last_layers = last_layer_list
+            self.loaded = self.num_datums 
 
         return self.last_layers
 

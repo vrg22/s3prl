@@ -181,14 +181,14 @@ class DownstreamExpert(DownstreamExpert_orig):
         print(f"[MODIFIED Expert] - using the testing fold: \"{self.fold}\". Ps. Use -o config.downstream_expert.datarc.test_fold=fold2 to change test_fold in config.")        
         
         # Create desired Dataset iterators
-        dataset = IemoH5LastLayerDataset(IEMOCAP_HOME, self.fold, 'train', self.datarc['pre_load'])
+        dataset = IemoH5LastLayerDataset(IEMOCAP_HOME, self.fold, 'train', False) #self.datarc['pre_load'])
         trainlen = int((1 - self.datarc['valid_ratio']) * len(dataset))
         lengths = [trainlen, len(dataset) - trainlen]
         
         torch.manual_seed(0)
         self.train_dataset, self.dev_dataset = random_split(dataset, lengths)
 
-        self.test_dataset = IemoH5LastLayerDataset(IEMOCAP_HOME, self.fold, 'test', self.datarc['pre_load'])
+        self.test_dataset = IemoH5LastLayerDataset(IEMOCAP_HOME, self.fold, 'test', False) #self.datarc['pre_load'])
 
         # Select out the desired model
         # TODO: What exactly is projector??

@@ -1,15 +1,15 @@
 runner:
-  # total_steps: 600
-  total_steps: 60000
+  total_steps: 600
+  # total_steps: 60000
   gradient_clipping: 1
   gradient_accumulate_steps: 1
 
-  # log_step: 60
-  # eval_step: 60
-  # save_step: 60
-  log_step: 700
-  eval_step: 700
-  save_step: 700
+  log_step: 60
+  eval_step: 60
+  save_step: 60
+  # log_step: 700
+  # eval_step: 700
+  # save_step: 700
   max_keep: 1
   eval_dataloaders:
     - dev
@@ -30,7 +30,8 @@ downstream_expert:
   datarc:
     root: /home/xadxad/work/audioproj/datasets/IEMOCAP/IEMOCAP_full_release
     test_fold: fold1
-    pre_load: True
+    pre_load: False
+    # pre_load: True
     train_batch_size: 10
     eval_batch_size: 10
     num_workers: 0
