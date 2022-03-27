@@ -266,7 +266,7 @@ class Runner():
         backward_steps = 0
         records = defaultdict(list)
         epoch = self.init_ckpt.get('Epoch', 0)
-        train_split = self.config['runner'].get("train_dataloader", "train") # Bad name, this is "train" or "dev"
+        train_split = self.config['runner'].get("train_dataloader", "train")
 
         # WanDB - TODO, is this even the right model to watch?? Or do we need to "watch" the composition of the upstream / featurizer / downstream as one unit??
         wandb.watch(self.downstream.model)
@@ -282,46 +282,29 @@ class Runner():
                 else:
                     raise
 
-            # for batch_id, (wavs, *others) in enumerate(tqdm(dataloader, dynamic_ncols=True, desc='train', file=tqdm_file)):
-            for batch_id, other_stuff in enumerate(tqdm(dataloader, dynamic_ncols=True, desc='train', file=tqdm_file)):                
+            for batch_id, (wavs, *others) in enumerate(tqdm(dataloader, dynamic_ncols=True, desc='train', file=tqdm_file)):
                 # try/except block for forward/backward
                 try:
                     if pbar.n >= pbar.total:
                         break
                     global_step = pbar.n + 1
-                    
-                    # VG/DES: load the fucking shit. Not (wavs, *others)
-                    # Our data isn't always FUCKING WAVS. Let's call it something else and be explicit where possible.
-                    (batched_last_layers, batched_labels, batched_speakers) = other_stuff                    
-                    features = [torch.FloatTensor(ll).to(self.args.device) for ll in batched_last_layers]
 
-                    # TODO: Be able to modify the below to, based on an input argument, selectively SKIP applying model upstream.
-                    # wavs = [torch.FloatTensor(wav).to(self.args.device) for wav in wavs]
-                    # if self.upstream.trainable:
-                    #     features = self.upstream.model(wavs)
-                    # else:
-                    #     with torch.no_grad():
-                    #         features = self.upstream.model(wavs)
-
-                    # Featurizer model apply - handles things like (potentially trainable) weighted average layers, normalization, etc.
-                    # features = self.featurizer.model(wavs, features)
+                    wavs = [torch.FloatTensor(wav).to(self.args.device) for wav in wavs]
+                    if self.upstream.trainable:
+                        features = self.upstream.model(wavs)
+                    else:
+                        with torch.no_grad():
+                            features = self.upstream.model(wavs)
+                    features = self.featurizer.model(wavs, features)
 
                     if specaug:
                         features, _ = specaug(features)
 
-                    # Compute model forward on this batch using the Downstream model (via DownstreamExpert)
                     loss = self.downstream.model(
                         train_split,
-                        features, batched_labels,
+                        features, *others,
                         records = records,
                     )
-
-                    # OLD
-                    # loss = self.downstream.model(
-                    #     train_split,
-                    #     features, *others,
-                    #     records = records,
-                    # )
                     batch_ids.append(batch_id)
 
                     gradient_accumulate_steps = self.config['runner'].get('gradient_accumulate_steps')
@@ -465,40 +448,21 @@ class Runner():
 
         batch_ids = []
         records = defaultdict(list)
-        for batch_id, other_stuff in enumerate(tqdm(dataloader, dynamic_ncols=True, desc=split, total=evaluate_steps)):
+        for batch_id, (wavs, *others) in enumerate(tqdm(dataloader, dynamic_ncols=True, desc=split, total=evaluate_steps)):
             if batch_id > evaluate_steps:
                 break
 
-            # VG/DES: load the fucking shit. Not (wavs, *others)
-            # Our data isn't always FUCKING WAVS. Let's call it something else and be explicit where possible.
-            (batched_last_layers, batched_labels, batched_speakers) = other_stuff                    
-            features = [torch.FloatTensor(ll).to(self.args.device) for ll in batched_last_layers]
+            wavs = [torch.FloatTensor(wav).to(self.args.device) for wav in wavs]
             with torch.no_grad():
-                # features = self.upstream.model(wavs)
-                # features = self.featurizer.model(wavs, features)
+                features = self.upstream.model(wavs)
+                features = self.featurizer.model(wavs, features)
                 self.downstream.model(
                     split,
-                    features, batched_labels,
+                    features, *others,
                     records = records,
                     batch_id = batch_id,
                 )
                 batch_ids.append(batch_id)
-
-        # for batch_id, (wavs, *others) in enumerate(tqdm(dataloader, dynamic_ncols=True, desc=split, total=evaluate_steps)):
-        #     if batch_id > evaluate_steps:
-        #         break
-
-        #     wavs = [torch.FloatTensor(wav).to(self.args.device) for wav in wavs]
-        #     with torch.no_grad():
-        #         features = self.upstream.model(wavs)
-        #         features = self.featurizer.model(wavs, features)
-        #         self.downstream.model(
-        #             split,
-        #             features, *others,
-        #             records = records,
-        #             batch_id = batch_id,
-        #         )
-        #         batch_ids.append(batch_id)
 
         save_names = self.downstream.model.log_records(
             split,
@@ -526,8 +490,6 @@ class Runner():
 
         return [] if type(save_names) is not list else save_names
 
-
-    # TODO: FIX THIS!!
     def inference(self):
         filepath = Path(self.args.evaluate_split)
         assert filepath.is_file(), filepath

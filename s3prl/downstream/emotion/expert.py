@@ -13,18 +13,18 @@ from torch.nn.utils.rnn import pad_sequence
 
 from ..model import *
 from .model import *
-from .dataset import IEMOCAPDataset, collate_fn
+from .dataset import IemoH5LastLayerDataset, IEMOCAPDataset, collate_fn
 
 import wandb
 
-class DownstreamExpert(nn.Module):
+class DownstreamExpert_orig(nn.Module):
     """
     Used to handle downstream-specific operations
     eg. downstream forward, metric computation, contents to log
     """
 
     def __init__(self, upstream_dim, downstream_expert, expdir, **kwargs):
-        super(DownstreamExpert, self).__init__()
+        super(DownstreamExpert_orig, self).__init__()
         self.upstream_dim = upstream_dim
         self.datarc = downstream_expert['datarc']
         self.modelrc = downstream_expert['modelrc']
@@ -156,3 +156,81 @@ class DownstreamExpert(nn.Module):
                 file.writelines(line)
 
         return save_names
+
+
+# A subclass of original DownstreamExpert_orig to allow overwriting relevant properties and interface methods to adapt the expert as we wish, e.g. for loading from the pre-saved last_layer H5 Dataset instead
+class DownstreamExpert(DownstreamExpert_orig):
+    """
+    Comment out this class and rename DownstreamExpert_orig above to "DownstreamExpert" to regain original functionality.
+    Or maybe just add code to the bottom of this script? lol.
+    """
+    def __init__(self, upstream_dim, downstream_expert, expdir, **kwargs):
+        # Run super of the ORIGINAL downstream expert - we don't want to waste the time processing the undesired Dataset needlessly
+        super(DownstreamExpert_orig, self).__init__()
+
+        # Set basic necessary properties
+        self.upstream_dim = upstream_dim
+        self.datarc = downstream_expert['datarc']
+        self.modelrc = downstream_expert['modelrc']
+
+        IEMOCAP_HOME = self.datarc['root']
+        self.fold = self.datarc.get('test_fold') or kwargs.get("downstream_variant")
+        if self.fold is None:
+            self.fold = "fold1"
+
+        print(f"[MODIFIED Expert] - using the testing fold: \"{self.fold}\". Ps. Use -o config.downstream_expert.datarc.test_fold=fold2 to change test_fold in config.")        
+        
+        # Create desired Dataset iterators
+        dataset = IemoH5LastLayerDataset(IEMOCAP_HOME, self.fold, 'train', self.datarc['pre_load'])
+        trainlen = int((1 - self.datarc['valid_ratio']) * len(dataset))
+        lengths = [trainlen, len(dataset) - trainlen]
+        
+        torch.manual_seed(0)
+        self.train_dataset, self.dev_dataset = random_split(dataset, lengths)
+
+        self.test_dataset = IemoH5LastLayerDataset(IEMOCAP_HOME, self.fold, 'test', self.datarc['pre_load'])
+
+        # Select out the desired model
+        # TODO: What exactly is projector??
+        model_cls = eval(self.modelrc['select'])
+        model_conf = self.modelrc.get(self.modelrc['select'], {})
+        self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
+        self.model = model_cls(
+            input_dim = self.modelrc['projector_dim'],
+            output_dim = dataset.class_num,
+            **model_conf,
+        )
+
+        # Set Loss objective
+        self.objective = nn.CrossEntropyLoss()
+        
+        # Some other properties
+        self.expdir = expdir
+        self.register_buffer('best_score', torch.zeros(1))
+
+    
+    # Don't need no FUCKING filenames.
+    def forward(self, mode, features, labels, records, **kwargs):        
+        device = features[0].device
+        features_len = torch.IntTensor([len(feat) for feat in features]).to(device=device)
+
+        features = pad_sequence(features, batch_first=True)
+        features = self.projector(features)
+        predicted, _ = self.model(features, features_len)
+
+        labels = torch.LongTensor(labels).to(features.device)
+        loss = self.objective(predicted, labels)
+
+        predicted_classid = predicted.max(dim=-1).indices
+        records['acc'] += (predicted_classid == labels).view(-1).cpu().float().tolist()
+        records['loss'].append(loss.item())
+
+        # Don't need no FUCKING filenames.
+        # records["filename"] += filenames
+        records["predict"] += [self.test_dataset.idx2emotion[idx] for idx in predicted_classid.cpu().tolist()]
+        records["truth"] += [self.test_dataset.idx2emotion[idx] for idx in labels.cpu().tolist()]
+
+        return loss
+
+
+

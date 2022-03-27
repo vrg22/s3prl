@@ -91,6 +91,10 @@ def load_h5(
         end_idx = len(train_last_layers) if wav_id+1 == num_wavs else train_ll_idx[wav_id+1]
         wav_ll_data = train_last_layers[start_idx:end_idx, :]
 
+        # Other attributes (identical in both groups)
+        emotion2idx = json.loads(test_attrs['emotion2idx']) # deserialize the labels dict
+        idx2emotion = {value: key for key, value in emotion2idx.items()} # create the reverse dict
+        
 
     # NOTE: THE BELOW DOES NOT WORK - "invalid location identifier"
     # bleh1 = train_group["label"]

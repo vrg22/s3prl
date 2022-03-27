@@ -1,8 +1,12 @@
 runner:
+  # total_steps: 600
   total_steps: 60000
   gradient_clipping: 1
   gradient_accumulate_steps: 1
 
+  # log_step: 60
+  # eval_step: 60
+  # save_step: 60
   log_step: 700
   eval_step: 700
   save_step: 700

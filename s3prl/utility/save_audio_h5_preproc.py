@@ -94,9 +94,12 @@ def generate_h5(
     # Create macro level groups within our file. Specifically, let's create a "train" group and a "test" group for each fold/Session    
     train_group = hdf.create_group("train")
     train_group.attrs["num_wavs"] = len(train_metadata)
+    train_group.attrs["emotion2idx"] = json.dumps(labels) # converts it to string so that we can save dict; we'll deserialize it upon read
 
     test_group = hdf.create_group("test")
-    test_group.attrs["num_wavs"] = len(test_metadata)    
+    test_group.attrs["num_wavs"] = len(test_metadata)
+    test_group.attrs["emotion2idx"] = json.dumps(labels) # redundant, but whatever.    
+
 
     ################### Setup TRAIN group w/ relevant datasets
     ## [1] "last_layer" dataset. The individual WAV tensors are float of shape (?, 768), so we essentially gotta concat these together.
@@ -209,7 +212,10 @@ def generate_h5(
 
         ############ FOR TESTING PURPOSES ONLY!!!!! ##############
         # if train_wav_id == 5:
-        #     sys.exit()
+        #     # Pretend there were only 5 wavs to process in this group
+        #     train_group.attrs["num_wavs"] = 5            
+        #     break # Break out of loop thus creating a tiny group in the H5
+        #     # sys.exit()
 
     print("--DONE PROCESSING training WAVS--")
 
@@ -251,6 +257,12 @@ def generate_h5(
             # Stack the meaningful axes of last_layer to dset
             test_ll_dset[-seq_len:] = torch.squeeze(last_layer)
 
+        ############ FOR TESTING PURPOSES ONLY!!!!! ##############
+        # if test_wav_id == 5:
+        #     # Pretend there were only 5 wavs to process in this group
+        #     test_group.attrs["num_wavs"] = 5            
+        #     break # Break out of loop thus creating a tiny group in the H5
+        #     # sys.exit()
 
     print("--DONE PROCESSING testing WAVS--")
 
