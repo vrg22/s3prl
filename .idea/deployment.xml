@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="emotion_pi_gatech" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="desmondcaulley@localhost:6214">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/desmondcaulley/Documents/emotion_pi" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="emotion_pi_gatech">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/desmondcaulley/Documents/emotion_pi" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>

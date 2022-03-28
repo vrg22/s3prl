@@ -60,7 +60,7 @@ class DownstreamExpert(nn.Module):
             input_dim = self.modelrc['projector_dim'],
             output_dim = dataset.class_num,
             **model_conf,
-        )
+        ).to('cuda')
         self.objective = nn.CrossEntropyLoss()
         self.expdir = expdir
         self.register_buffer('best_score', torch.zeros(1))

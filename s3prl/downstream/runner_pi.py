@@ -17,7 +17,6 @@ from tensorboardX import SummaryWriter
 from torch.utils.data import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import is_initialized, get_rank, get_world_size
-sss
 from s3prl import hub
 from s3prl import downstream
 from s3prl.optimizers import get_optimizer

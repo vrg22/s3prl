@@ -11,6 +11,9 @@ import torch
 import torchaudio
 from torchaudio.transforms import Resample
 
+from datetime import datetime
+
+sys.path.insert(0, '/home/desmondcaulley/Documents/emotion_pi')
 import s3prl.hub as hub
 
 
@@ -23,7 +26,7 @@ import s3prl.hub as hub
 # TODO: How to organize the H5?
 
 # Place absolute path to IEMOCAP here
-IEMOCAP_HOME = '/home/xadxad/work/audioproj/datasets/IEMOCAP/IEMOCAP_full_release/'
+IEMOCAP_HOME = '/home/desmondcaulley/Documents/Research/Corpora/IEMOCAP/'
 
 BASE_SESSION_PATH = path_join(IEMOCAP_HOME, '{}/')
 
@@ -304,5 +307,7 @@ def main(session_str):
 # N.B. - Session1 corresponds to fold1 and thus also corresponds to WHICH output files are being created
 
 # Note: argv[1] ie script input should be "Session1" or other valid choice in order to output the H5 file for Session1
-if __name__ == "__main__":    
+if __name__ == "__main__":
+    print('Start Time =', datetime.now().strftime('%H:%M:%S'))
     main(sys.argv[1])
+    print('End Time =', datetime.now().strftime('%H:%M:%S'))

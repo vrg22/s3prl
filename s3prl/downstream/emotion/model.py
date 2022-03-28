@@ -3,6 +3,7 @@ import math
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
+from downstream.emotion.audio_emo_net import MarbleNet
 
 class SelfAttentionPooling(nn.Module):
     """

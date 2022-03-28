@@ -3,6 +3,7 @@ import math
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
+from downstream.emotion_pi.audio_emo_net import MarbleNet
 from downstream.model import UtteranceLevel, AttentivePooling, MeanPooling
 
 class SelfAttentionPooling(nn.Module):
@@ -215,3 +216,7 @@ class UtterLinear(nn.Module):
         predicted = self.model(features)
 
         return predicted
+
+
+
+

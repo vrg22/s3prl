@@ -67,7 +67,7 @@ class DownstreamExpert(nn.Module):
             input_dim = self.modelrc['projector_dim'],
             output_dim = self.train_dataset.class_num,
             **model_conf,
-        )
+        ).to('cuda')
         self.cross_entropy_loss = nn.CrossEntropyLoss()
         self.mse_loss = nn.MSELoss()
         self.expdir = expdir
@@ -113,7 +113,7 @@ class DownstreamExpert(nn.Module):
         features_len = torch.IntTensor([len(feat) for feat in features]).to(device=device)
         features = pad_sequence(features, batch_first=True)
         features = self.projector(features)
-        predicted = self.model(features, features_len)
+        predicted, _ = self.model(features, features_len)
         labels = torch.LongTensor(labels).to(features.device)
 
         if mode == 'train':
@@ -121,7 +121,7 @@ class DownstreamExpert(nn.Module):
                 comp_features_len = torch.IntTensor([len(feat) for feat in comp_features]).to(device=device)
                 comp_features = pad_sequence(comp_features, batch_first=True)
                 comp_features = self.projector(comp_features)
-                comp_predicted = self.model(comp_features, comp_features_len)
+                comp_predicted,_ = self.model(comp_features, comp_features_len)
 
             cross_entropy_loss = self.cross_entropy_loss(predicted, labels)
             mse_loss = self.mse_loss(predicted, comp_predicted)
